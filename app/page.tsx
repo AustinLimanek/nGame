@@ -1,10 +1,14 @@
 import Image from 'next/image'
-import { Inter } from '@next/font/google'
+import { Inter } from "next/font/google"
 import styles from './page.module.css'
+//import { useRouter } from 'next/router'
+import Link from 'next/link'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export default function Home() {
+  //const router = useRouter();
+
   return (
     <main className={styles.main}>
       <div className={styles.description}>
@@ -28,6 +32,7 @@ export default function Home() {
               priority
             />
           </a>
+          <Link href="/newPage">Go to Page</Link>
         </div>
       </div>
 
