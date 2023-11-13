@@ -27,13 +27,16 @@ class Platform {
 export default function NewPage() {
   const INTVELOCITY = 20;
   const GRAVITY = 4; 
-  const JUMP = 20;
+  const JUMP = 20; 
   //Ground x => horizontal start, y=> vertical start
   const platform1: Platform = new Platform(0, 500);
   const platform2: Platform = new Platform(500, 800, true);
   const platform3: Platform = new Platform(300, 800, false, 100);
   const platform4: Platform = new Platform(300, 900, false, 100);
-  const ground: Platform = new Platform(0, 1000, false, 1000)
+  const platform5: Platform = new Platform(700, 600, false, 600);
+  const platform6: Platform = new Platform(1000, 700, false, 400);
+  const platform7: Platform = new Platform(1200, 400, false, 300);
+  const ground: Platform = new Platform(0, 1000, false, 4000)
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [velocity, setVelocity] = useState<number>(INTVELOCITY);
   const [yVelocity, setYVelocity] = useState<number>(0);
@@ -44,7 +47,7 @@ export default function NewPage() {
   const [health, setHealth] = useState<number>(10);
   const [pause, setPause] = useState<boolean>(false);
   const [playerColor, setPlayerColor] = useState<string>("blue");
-  const [platformArray, setPlatformArray] = useState<Platform[]>([platform1, platform2, platform3, platform4, ground])
+  const [platformArray, setPlatformArray] = useState<Platform[]>([platform1, platform2, platform3, platform4, platform5, platform6, platform7, ground])
   const [currentPlatform, setCurrentPlatform] = useState<Platform>(platform1);
   const [onPlatform, setOnPlatform] = useState<boolean>(false);
 
@@ -67,17 +70,29 @@ export default function NewPage() {
   );
 
   const handlePlatformSelection = useCallback(()=>{
-    const validHorizontal = platformArray.filter((platform: Platform) => platform.x + (platform.isSlider ? slider(0) : 0) - 50 <= position.x && position.x <= platform.x + platform.length);
+    const shift = currentPlatform.isSlider ? slider(0) : 0;
+    const validHorizontal = platformArray.filter((platform: Platform) => platform.x + shift - 50 <= position.x && position.x <= platform.x + platform.length + shift);
     if(validHorizontal.length === 1){
       setCurrentPlatform(validHorizontal[0]);
     }
     else{
       const filteredVertical = validHorizontal.filter(platform => platform.y > position.y).sort((a, b)=> a.y - b.y);
-      console.log(filteredVertical);
+      // console.log(filteredVertical);
       filteredVertical.length === 0 ? setCurrentPlatform(ground) : setCurrentPlatform(filteredVertical[0]);
       
     }
-  }, [position.x, platformArray, position.y])
+  }, [position.x, platformArray, position.y]);
+
+  const handleOnPlatform = useCallback(()=>{
+    const shift = currentPlatform.isSlider ? slider(0) : 0;
+    const atPlatform: boolean = currentPlatform.y - 10 < position.y + 50 && position.y + 50 < currentPlatform.y + 10 && currentPlatform.x + shift <= position.x && position.x <= currentPlatform.x + currentPlatform.length + shift;
+    if(atPlatform && !onPlatform){
+      setOnPlatform(true);
+      return true;
+    }
+    else{setOnPlatform(false);};
+    // console.log(onPlatform)
+  }, [position.y, currentPlatform, slider])
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -220,25 +235,54 @@ export default function NewPage() {
   //this continuously runs when gravity is non-zero. Down is considered positive. 
   useEffect(() => {
     //this turns off jumping when the player hits ground1 
-    if (position.y > currentPlatform.y - 50 && currentPlatform.x < currentPlatform.x + currentPlatform.length) {
+    const shift = currentPlatform.isSlider ? slider(0) : 0;
+    if (position.y > currentPlatform.y - 50 && currentPlatform.x + shift - 50 <= position.x && position.x <= currentPlatform.x + currentPlatform.length + shift) {
       setIsJumping(false);
       setYVelocity(0); // Prevent any residual vertical velocity
       setPosition((prevPos) => ({ ...prevPos, y: currentPlatform.y - 50 }));
     }
 
     //gravity works when to the left of ground1 and about it. (remember, this is relative to the top corner of the player.)
-    if(position.x < currentPlatform.x + currentPlatform.length && position.y < currentPlatform.y - 50 || isJumping || currentPlatform.y > position.y + 50){
+    if( position.y < currentPlatform.y - 50 || isJumping || !onPlatform){
       setPosition((prevPos) => ({ ...prevPos, y: prevPos.y + yVelocity }));
     }
   }, [yVelocity, position.x, isJumping, currentPlatform]);
 
-  // useEffect(() => {
-  //   if (position.y >= GROUND[1] + 50) {
-  //     setIsJumping(false);
-  //     setYVelocity(0); // Prevent any residual vertical velocity
-  //     setPosition((prevPos) => ({ ...prevPos, y: 50 }));
-  //   }
-  // }, [position.y]);
+  useEffect(() => {
+    handleOnPlatform() ? setYVelocity(0): null;
+  }, [position.y, handleOnPlatform]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const threshold = window.innerWidth / 2;
+      // Check if the block is at or beyond the threshold
+      console.log("screenCenter", threshold);
+      console.log("innerWidth", window.innerWidth)
+      console.log("xOffSet", window.scrollX)
+      console.log(position.x);
+      if (position.x >= threshold + window.scrollX) {
+        // Calculate how much to scroll by
+        const scrollBy = position.x - (threshold + window.scrollX);
+        
+        // Scroll the window to the right
+        window.scrollBy({ left: scrollBy, behavior: 'smooth' });
+
+        // Update the block's position to stay in the same place on the screen
+        // setPosition({ x: threshold, y: position.y });
+      }
+      if(position.x < window.scrollX + window.innerWidth / 3){
+        window.scrollBy({ left: -100, behavior: 'smooth' });
+      }
+    };
+
+    // Add a scroll event listener
+    handleScroll();
+
+    return () => {
+      // Remove the scroll event listener when the component unmounts
+      //  window.removeEventListener('scroll', handleScroll);
+    };
+  }, [position.x]);
 
 
   function quickSort(array: number[]): number[]{
