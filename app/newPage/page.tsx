@@ -6,23 +6,46 @@ const inter = Inter({ subsets: ['latin'] })
 
 import React, { useState, useEffect, useCallback } from 'react';
 
+class Platform {
+
+  x: number;
+  y: number;
+  length: number = 500;
+  depth: number = 50;
+  color: string = "green";
+  isSlider: boolean;
+
+  constructor(x: number, y: number, isSlider: boolean = false){
+    this.x = x;
+    this.y = y;
+    this.isSlider = isSlider;
+  }
+
+}
+
 
 export default function NewPage() {
   const INTVELOCITY = 20;
   const GRAVITY = 4; // Adjust the value as needed
-  const GROUND1 = [0, 500];
-  const GROUND2 = [700, 800];
+  //Ground x => horizontal start, y=> vertical start
+  const platform1 = new Platform(0, 500);
+  const platform2 = new Platform(500, 800, true);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [velocity, setVelocity] = useState<number>(INTVELOCITY);
   const [yVelocity, setYVelocity] = useState<number>(0);
   const [isJumping, setIsJumping] = useState<boolean>(false);
   const [time, setTime] = useState<number>(0);
-  const [shotsArray, setShotsArray] = useState<any>([]);
+  const [shotsArray, setShotsArray] = useState<any[]>([]);
+  const [coinCount, setCoinCount] = useState<number>(0);
+  const [health, setHealth] = useState<number>(10);
+  const [pause, setPause] = useState<boolean>(false);
+  const [playerColor, setPlayerColor] = useState<string>("blue");
+  const [platformArray, setPlatformArray] = useState<Platform[]>([platform1, platform2])
 
   const slider = useCallback((phase: number, angularVelocity: number = 1 , amplitude: number = 1000)=>{ 
     const cycle = (angularVelocity * time + phase) % amplitude;
     return cycle < amplitude * 0.5 ? cycle : amplitude - cycle;
-  },[time]);
+  }, [time]);
 
 
   const acceleration = useCallback(
@@ -39,7 +62,7 @@ export default function NewPage() {
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      console.log(e);
+      // console.log(e);
       acceleration(e); // Call acceleration to potentially update velocity
       switch (e.code) {
         case 'ArrowLeft':
@@ -67,8 +90,63 @@ export default function NewPage() {
   );
 
   const handleClick = useCallback( () => {
-    setShotsArray([...shotsArray, {x: slider(300, 2) + 25, y: 150, setTime: time}]);
-    }, [shotsArray, time, slider])
+    setShotsArray([...shotsArray, {x: slider(300, 2) + 25, y: 150, setTime: time, type: Math.random() > 0.2 ? "coin" : "shot"}]);
+  }, [shotsArray, time, slider])
+
+  // const handleHitBox = useCallback( () => {
+  //   console.log(position.x);
+  //   console.log(position.y)
+  //   const intermediateArray = shotsArray.map((shot: any) => {
+  //     console.log(shot);
+  //     if((position.x <= shot.x && shot.x <= position.x + 50) && (position.y <= shot.y + time - shot.setTime && shot.y + time - shot.setTime <= position.y + 50)){
+  //       // console.log("hit")
+  //       setCoinCount(prevCount => prevCount + 1);
+  //       return {...shot, hit: true};
+  //     };
+  //     return shot;
+  //   });
+  //   setShotsArray((preArray: any[]) => intermediateArray.filter((shot: any) => shot.hit === false));
+  // }, [shotsArray, position.x, position.y, time])
+
+  const handleCoin = () =>  {
+    setCoinCount((prevCount) => prevCount + 0.5);
+  }
+
+  function changeBack() {
+    setTimeout(()=>setPlayerColor("blue"), 50);
+  }
+
+  const handleShot = () =>  {
+    setHealth((prevHealth) => prevHealth - 0.5);
+    setPlayerColor("red");
+    changeBack();
+  }
+
+  const handleHitBox = useCallback( () => {
+    setShotsArray((prevShotsArray: any[]) => {
+      const updatedArray = [...prevShotsArray];
+      let collected = false; // Track if a coin has been collected
+      for (let i = 0; i < updatedArray.length; i++) {
+        const shot = updatedArray[i];
+        if (
+          position.x <= shot.x &&
+          shot.x <= position.x + 50 &&
+          position.y <= shot.y + time - shot.setTime &&
+          shot.y + time - shot.setTime <= position.y + 50
+        ) {
+          if (!collected) {
+            shot.type === "coin" ? handleCoin() : handleShot();
+            collected = true; // Mark that a coin has been collected
+          }
+          updatedArray.splice(i, 1); // Remove the shot from the array
+          i--; // Decrement i to account for the removed element
+        }
+      }
+      return updatedArray;
+    });
+  }, [position, time])
+
+  
   
 
   const handleFilter = useCallback((range: number) => {
@@ -99,29 +177,36 @@ export default function NewPage() {
   useEffect(() => {
     // Gravity effect
     const gameClock = setInterval(() => {
-      setTime((prevTime) => prevTime + 1);
-      handleFilter(500);
-      if(Math.random() < 0.01){
-        handleClick();
+      if(!pause){
+        setTime((prevTime) => prevTime + 1);
+        handleFilter(500);
+        handleHitBox();
+        if(Math.random() < 0.01){
+          handleClick();
+        }
       }
     }, 10); // Adjust the interval as needed
   
     return () => {
       clearInterval(gameClock);
     };
-  }, [handleFilter, handleClick]);
+  }, [handleFilter, handleClick, handleHitBox, pause]);
+
+  const isAbove = useCallback(()=>{
+    
+  }, [])
 
   //this continuously runs when gravity is non-zero. Down is considered positive. 
   useEffect(() => {
-    // console.log(position.x)
-    // console.log(yVelocity)
-    if (position.y > GROUND1[1] - 50 && position.x < 500) {
+    //this turns off jumping when the player gits ground1 
+    if (position.y > platform1.y - 50 && position.x < 500) {
       setIsJumping(false);
       setYVelocity(0); // Prevent any residual vertical velocity
-      setPosition((prevPos) => ({ ...prevPos, y: GROUND1[1] - 50 }));
+      setPosition((prevPos) => ({ ...prevPos, y: platform1.y - 50 }));
     }
 
-    if(position.x < 500 && position.y < GROUND1[1] - 50 || position.x > 500 && position.y < GROUND2[1] - 75 || isJumping){
+    //gravity works when to the left of ground1 and about it. (remember, this is relative to the top corner of the player.)
+    if(position.x < 500 && position.y < platform1.y - 50 || position.x > 500 && position.y < platform2.y - 75 || isJumping){
       setPosition((prevPos) => ({ ...prevPos, y: prevPos.y + yVelocity }));
     }
   }, [yVelocity, position.x, isJumping]);
@@ -160,7 +245,20 @@ export default function NewPage() {
     <span className={inter.className}>{time}</span>;
     <button onClick={handleClick}>Generate</button>
     <button onClick={()=>handleFilter(300)}>Filter</button>
+    <button onClick={()=>setPause(!pause)}>{pause ? "Play" : "Pause"}</button>
     <button onClick={()=>console.log(quickSort([1,-2,6,7,20,-3,9]))}>Sort</button>
+    <p>Total Gold: {coinCount}</p>
+    <p>Total Health: {health}</p>
+    <div
+      style={{
+        position: 'absolute',
+        width: '50px',
+        height: '50px',
+        backgroundColor: `${playerColor}`,
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+      }}
+    ></div>
     <div
       style={{
         position: 'absolute',
@@ -171,42 +269,24 @@ export default function NewPage() {
         top: `${100}px`,
       }} 
     ></div>
-    <div
-      style={{
-        position: 'absolute',
-        width: '50px',
-        height: '50px',
-        backgroundColor: 'blue',
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-      }}
-    ></div>
-    <div
-      style={{
-        position: 'absolute',
-        width: '500px',
-        height: '50px',
-        backgroundColor: 'green',
-        left: `${GROUND1[0]}px`,
-        top: `${GROUND1[1]}px`,
-      }}
-    ></div>
-    <div
-      style={{
-        position: 'absolute',
-        width: '500px',
-        height: '50px',
-        backgroundColor: 'green',
-        left: `${GROUND2[0] + slider(0)}px`,
-        top: `${GROUND2[1]}px`,
-      }}
-    ></div>
+    {platformArray.map((platform: Platform, index: number) => 
+      <div key={index}
+        style={{
+          position: 'absolute',
+          width: '500px',
+          height: '50px',
+          backgroundColor: 'green',
+          left: `${platform.x + (platform.isSlider ? slider(0) : 0)}px`,
+          top: `${platform.y}px`,
+        }}
+      ></div>
+    )}
     {shotsArray.map((element: any, index: number) => <div key={index}
       style={{
         position: 'absolute',
         width: '5px',
         height: '5px',
-        backgroundColor: 'green',
+        backgroundColor: `${element.type === "coin" ? "gold" : "red"}`,
         left: `${element.x}px`,
         top: `${element.y + time - element.setTime}px`,
       }}
