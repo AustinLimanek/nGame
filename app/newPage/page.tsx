@@ -10,26 +10,30 @@ class Platform {
 
   x: number;
   y: number;
-  length: number = 500;
+  length: number;
   depth: number = 50;
   color: string = "green";
   isSlider: boolean;
 
-  constructor(x: number, y: number, isSlider: boolean = false){
+  constructor(x: number, y: number, isSlider: boolean = false, length: number = 500){
     this.x = x;
     this.y = y;
     this.isSlider = isSlider;
+    this.length = length;
   }
 
 }
 
-
 export default function NewPage() {
   const INTVELOCITY = 20;
-  const GRAVITY = 4; // Adjust the value as needed
+  const GRAVITY = 4; 
+  const JUMP = 20;
   //Ground x => horizontal start, y=> vertical start
-  const platform1 = new Platform(0, 500);
-  const platform2 = new Platform(500, 800, true);
+  const platform1: Platform = new Platform(0, 500);
+  const platform2: Platform = new Platform(500, 800, true);
+  const platform3: Platform = new Platform(300, 800, false, 100);
+  const platform4: Platform = new Platform(300, 900, false, 100);
+  const ground: Platform = new Platform(0, 1000, false, 1000)
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [velocity, setVelocity] = useState<number>(INTVELOCITY);
   const [yVelocity, setYVelocity] = useState<number>(0);
@@ -40,7 +44,9 @@ export default function NewPage() {
   const [health, setHealth] = useState<number>(10);
   const [pause, setPause] = useState<boolean>(false);
   const [playerColor, setPlayerColor] = useState<string>("blue");
-  const [platformArray, setPlatformArray] = useState<Platform[]>([platform1, platform2])
+  const [platformArray, setPlatformArray] = useState<Platform[]>([platform1, platform2, platform3, platform4, ground])
+  const [currentPlatform, setCurrentPlatform] = useState<Platform>(platform1);
+  const [onPlatform, setOnPlatform] = useState<boolean>(false);
 
   const slider = useCallback((phase: number, angularVelocity: number = 1 , amplitude: number = 1000)=>{ 
     const cycle = (angularVelocity * time + phase) % amplitude;
@@ -60,10 +66,24 @@ export default function NewPage() {
     [setVelocity]
   );
 
+  const handlePlatformSelection = useCallback(()=>{
+    const validHorizontal = platformArray.filter((platform: Platform) => platform.x + (platform.isSlider ? slider(0) : 0) - 50 <= position.x && position.x <= platform.x + platform.length);
+    if(validHorizontal.length === 1){
+      setCurrentPlatform(validHorizontal[0]);
+    }
+    else{
+      const filteredVertical = validHorizontal.filter(platform => platform.y > position.y).sort((a, b)=> a.y - b.y);
+      console.log(filteredVertical);
+      filteredVertical.length === 0 ? setCurrentPlatform(ground) : setCurrentPlatform(filteredVertical[0]);
+      
+    }
+  }, [position.x, platformArray, position.y])
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       // console.log(e);
       acceleration(e); // Call acceleration to potentially update velocity
+      //handlePlatformSelection();
       switch (e.code) {
         case 'ArrowLeft':
           setPosition((prevPos) => ({ ...prevPos, x: prevPos.x - velocity >= 0 ? prevPos.x - velocity : 0 }));
@@ -79,7 +99,7 @@ export default function NewPage() {
           break;
         case 'Space':
           if(!isJumping){
-          setYVelocity(-20); // Adjust the jump strength as needed
+          setYVelocity(-JUMP); // Adjust the jump strength as needed
           setIsJumping(true);}
           break;
         default:
@@ -167,12 +187,13 @@ export default function NewPage() {
     // Gravity effect
     const gravityInterval = setInterval(() => {
       setYVelocity((prevYVelocity) => prevYVelocity + GRAVITY);
+      handlePlatformSelection();
     }, 100); // Adjust the interval as needed
   
     return () => {
       clearInterval(gravityInterval);
     };
-  }, []);
+  }, [handlePlatformSelection]);
 
   useEffect(() => {
     // Gravity effect
@@ -198,18 +219,18 @@ export default function NewPage() {
 
   //this continuously runs when gravity is non-zero. Down is considered positive. 
   useEffect(() => {
-    //this turns off jumping when the player gits ground1 
-    if (position.y > platform1.y - 50 && position.x < 500) {
+    //this turns off jumping when the player hits ground1 
+    if (position.y > currentPlatform.y - 50 && currentPlatform.x < currentPlatform.x + currentPlatform.length) {
       setIsJumping(false);
       setYVelocity(0); // Prevent any residual vertical velocity
-      setPosition((prevPos) => ({ ...prevPos, y: platform1.y - 50 }));
+      setPosition((prevPos) => ({ ...prevPos, y: currentPlatform.y - 50 }));
     }
 
     //gravity works when to the left of ground1 and about it. (remember, this is relative to the top corner of the player.)
-    if(position.x < 500 && position.y < platform1.y - 50 || position.x > 500 && position.y < platform2.y - 75 || isJumping){
+    if(position.x < currentPlatform.x + currentPlatform.length && position.y < currentPlatform.y - 50 || isJumping || currentPlatform.y > position.y + 50){
       setPosition((prevPos) => ({ ...prevPos, y: prevPos.y + yVelocity }));
     }
-  }, [yVelocity, position.x, isJumping]);
+  }, [yVelocity, position.x, isJumping, currentPlatform]);
 
   // useEffect(() => {
   //   if (position.y >= GROUND[1] + 50) {
@@ -273,7 +294,7 @@ export default function NewPage() {
       <div key={index}
         style={{
           position: 'absolute',
-          width: '500px',
+          width: `${platform.length}px`,
           height: '50px',
           backgroundColor: 'green',
           left: `${platform.x + (platform.isSlider ? slider(0) : 0)}px`,
