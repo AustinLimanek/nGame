@@ -15,11 +15,12 @@ class Platform {
   color: string = "green";
   isSlider: boolean;
 
-  constructor(x: number, y: number, isSlider: boolean = false, length: number = 500){
+  constructor(x: number, y: number, isSlider: boolean = false, length: number = 500, color: string = "green"){
     this.x = x;
     this.y = y;
     this.isSlider = isSlider;
     this.length = length;
+    this.color = color;
   }
 
 }
@@ -28,18 +29,22 @@ export default function NewPage() {
   const INTVELOCITY = 20;
   const GRAVITY = 4; 
   const JUMP = 20; 
+  const relativeHeight = 10000000;
   //Ground x => horizontal start, y=> vertical start
-  const platform1: Platform = new Platform(0, 500);
-  const platform2: Platform = new Platform(500, 800, true);
-  const platform3: Platform = new Platform(300, 800, false, 100);
-  const platform4: Platform = new Platform(300, 900, false, 100);
-  const platform5: Platform = new Platform(700, 600, false, 600);
-  const platform6: Platform = new Platform(1000, 700, false, 400);
-  const platform7: Platform = new Platform(1200, 400, false, 300);
-  const platform8: Platform = new Platform(500, 350, true, 200);
-  const platform9: Platform = new Platform(600, 250, true, 200);
-  const ground: Platform = new Platform(0, 1000, false, 4000)
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const ground: Platform = new Platform(0, 1000 + relativeHeight, false, 4000, "brown")
+  const platform1: Platform = new Platform(0, 500 + relativeHeight);
+  const platform2: Platform = new Platform(500, 800 + relativeHeight, true);
+  const platform3: Platform = new Platform(300, 800 + relativeHeight, false, 100);
+  const platform4: Platform = new Platform(300, 900 + relativeHeight, false, 100);
+  const platform5: Platform = new Platform(700, 600 + relativeHeight, false, 600);
+  const platform6: Platform = new Platform(1000, 700 + relativeHeight, false, 400);
+  const platform7: Platform = new Platform(1200, 400 + relativeHeight, false, 300);
+  const platform8: Platform = new Platform(500, 350 + relativeHeight, true, 200);
+  const platform9: Platform = new Platform(600, 250 + relativeHeight, true, 200);
+  const platform10: Platform = new Platform(1400, 400 + relativeHeight, false, 300);
+  const platform11: Platform = new Platform(1200, 100 + relativeHeight, false, 300);
+  const platform12: Platform = new Platform(1300, -200 + relativeHeight, false, 300);
+  const [position, setPosition] = useState({ x: 0, y: relativeHeight });
   const [velocity, setVelocity] = useState<number>(INTVELOCITY);
   const [yVelocity, setYVelocity] = useState<number>(0);
   const [isJumping, setIsJumping] = useState<boolean>(false);
@@ -49,7 +54,7 @@ export default function NewPage() {
   const [health, setHealth] = useState<number>(10);
   const [pause, setPause] = useState<boolean>(false);
   const [playerColor, setPlayerColor] = useState<string>("blue");
-  const [platformArray, setPlatformArray] = useState<Platform[]>([platform1, platform2, platform3, platform4, platform5, platform6, platform7, platform8, platform9, ground])
+  const [platformArray, setPlatformArray] = useState<Platform[]>([ground, platform1, platform2, platform3, platform4, platform5, platform6, platform7, platform8, platform9, platform10, platform11, platform12])
   const [currentPlatform, setCurrentPlatform] = useState<Platform>(platform1);
   const [onPlatform, setOnPlatform] = useState<boolean>(false);
 
@@ -58,6 +63,9 @@ export default function NewPage() {
     return cycle < amplitude * 0.5 ? cycle : amplitude - cycle;
   }, [time]);
 
+  useEffect(()=>{
+    window.scrollTo(0, relativeHeight);
+  }, []);
 
   const acceleration = useCallback(
     (e: KeyboardEvent) => {
@@ -109,12 +117,15 @@ export default function NewPage() {
           setPosition((prevPos) => ({ ...prevPos, x: prevPos.x + velocity }));
           break;
         case 'ArrowUp':
+          e.preventDefault();
           setPosition((prevPos) => ({ ...prevPos, y: prevPos.y - velocity }));
           break;
         case 'ArrowDown':
+          e.preventDefault();
           setPosition((prevPos) => ({ ...prevPos, y: prevPos.y + velocity }));
           break;
         case 'Space':
+          e.preventDefault();
           if(!isJumping){
           setYVelocity(-JUMP); // Adjust the jump strength as needed
           setIsJumping(true);}
@@ -127,7 +138,7 @@ export default function NewPage() {
   );
 
   const handleClick = useCallback( () => {
-    setShotsArray([...shotsArray, {x: slider(300, 2) + 25, y: 150, setTime: time, type: Math.random() > 0.2 ? "coin" : "shot"}]);
+    setShotsArray([...shotsArray, {x: slider(300, 2) + 25, y: 150 + relativeHeight, setTime: time, type: Math.random() > 0.2 ? "coin" : "shot"}]);
   }, [shotsArray, time, slider])
 
   // const handleHitBox = useCallback( () => {
@@ -187,7 +198,7 @@ export default function NewPage() {
   
 
   const handleFilter = useCallback((range: number) => {
-    setShotsArray(shotsArray.filter((element: any) => element.y + time - element.setTime < range));
+    setShotsArray(shotsArray.filter((element: any) => element.y + time - element.setTime < range  + relativeHeight));
   },[shotsArray, time])
 
   // Handle user input (e.g., arrow keys)
@@ -212,6 +223,11 @@ export default function NewPage() {
     };
   }, [handlePlatformSelection]);
 
+  const addPlatform = useCallback(() => {
+    const newPlatform = new Platform(position.x, position.y - 200, false, 200, "lightblue")
+    setPlatformArray(prevArray => [...prevArray, newPlatform]);
+  }, [position.x, position.y])
+
   useEffect(() => {
     // Gravity effect
     const gameClock = setInterval(() => {
@@ -221,6 +237,9 @@ export default function NewPage() {
         handleHitBox();
         if(Math.random() < 0.01){
           handleClick();
+        }
+        if(time % 300 === 0){
+          //addPlatform();
         }
       }
     }, 10); // Adjust the interval as needed
@@ -259,19 +278,29 @@ export default function NewPage() {
       const threshold = window.innerWidth / 2;
       const thresholdY = window.innerHeight / 2;
       // Check if the block is at or beyond the threshold
-      console.log("screenCenter", threshold);
-      console.log("innerWidth", window.innerWidth)
-      console.log("innerHeight", window.innerHeight)
-      console.log("xOffSet", window.scrollX)
-      console.log(position.x);
+      // console.log("screenCenter", threshold);
+      // console.log("innerWidth", window.innerWidth)
+      // console.log("innerHeight", window.innerHeight)
+      // console.log("xOffSet", window.scrollX)
+      // console.log(position.x);
+      // console.log(position.y);
 
       // window.scrollTo(0, 1000)
-      if (position.y <= thresholdY) {
+      if (position.y < thresholdY / 2 + window.scrollY) {
         // Calculate how much to scroll by
         // const scrollBy = position.x - (threshold + window.scrollX);
+        // Scroll the window to the right
+        window.scrollBy({ top: -100, behavior: 'smooth' });
+
+        // Update the block's position to stay in the same place on the screen
+        // setPosition({ x: threshold, y: position.y });
+      }
+      if (position.y >= thresholdY + window.scrollY) {
+        // Calculate how much to scroll by
+        const scrollBy = position.y - (thresholdY + window.scrollY);
         
         // Scroll the window to the right
-        // window.scrollBy({ top: 10, behavior: 'smooth' });
+        window.scrollBy({top: scrollBy, behavior: 'smooth' });
 
         // Update the block's position to stay in the same place on the screen
         // setPosition({ x: threshold, y: position.y });
@@ -320,17 +349,34 @@ export default function NewPage() {
 
   // }
 
+  
+
+  // useEffect(() => {
+  //   // Add a new plat form periodically
+  //   const platformInterval = setInterval(() => {
+  //     console.log("hello")
+  //     addPlatform(); 
+  //   }, 2000); // Adjust the interval as needed
+
+  //   return () => {
+  //     clearInterval(platformInterval);
+  //   };
+  // }, []);
+
   return (
   <>
-    <Link href="/">Navigate Home</Link>
-    <span className={inter.className}>-&gt; Hello, World! &lt;-</span>;
-    <span className={inter.className}>{time}</span>;
-    <button onClick={handleClick}>Generate</button>
-    <button onClick={()=>handleFilter(300)}>Filter</button>
-    <button onClick={()=>setPause(!pause)}>{pause ? "Play" : "Pause"}</button>
-    <button onClick={()=>console.log(quickSort([1,-2,6,7,20,-3,9]))}>Sort</button>
-    <p>Total Gold: {coinCount}</p>
-    <p>Total Health: {health}</p>
+    <div style={{position: "fixed"}}>
+      <Link href="/">Navigate Home</Link>
+      <span className={inter.className}>-&gt; Hello, World! &lt;-</span>;
+      <span className={inter.className}>{time}</span>;
+      <button onClick={handleClick}>Generate</button>
+      <button onClick={()=>handleFilter(300)}>Filter</button>
+      <button onClick={()=>setPause(!pause)}>{pause ? "Play" : "Pause"}</button>
+      <button onClick={()=>console.log(quickSort([1,-2,6,7,20,-3,9]))}>Sort</button>
+      <button onClick={()=>addPlatform()}>Insert Platform</button>
+      <p>Total Gold: {coinCount}</p>
+      <p>Total Health: {health}</p>
+    </div>
     <div
       style={{
         position: 'absolute',
@@ -349,7 +395,7 @@ export default function NewPage() {
         height: '50px',
         backgroundColor: 'blue',
         left: `${slider(300, 2)}px`,
-        top: `${100}px`,
+        top: `${100 + relativeHeight}px`,
       }} 
     ></div>
     {platformArray.map((platform: Platform, index: number) => 
@@ -358,7 +404,7 @@ export default function NewPage() {
           position: 'absolute',
           width: `${platform.length}px`,
           height: '50px',
-          backgroundColor: 'green',
+          backgroundColor: `${platform.color}`,
           left: `${platform.x + (platform.isSlider ? slider(0) : 0)}px`,
           top: `${platform.y}px`,
         }}
