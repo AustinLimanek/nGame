@@ -34,6 +34,7 @@ export default function Home() {
           </a>
           <Link href="/newPage">Go to Page</Link>
           <Link href="/testingYScroll">Go to Page</Link>
+          <Link href="/snake">Snake</Link>
         </div>
       </div>
 
