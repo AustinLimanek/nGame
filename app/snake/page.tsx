@@ -76,6 +76,25 @@ export default function NewPage() {
 
   }
 
+  const sqrt = (input: number, initialGuess: number = 1, tolerance: number = 0.0001): number => {
+    return sqrtIter(initialGuess, tolerance, input);
+  }
+
+  const sqrtIter = (guess: number, tolerance: number, input: number): number => {
+    console.log(guess);
+    return isGoodEnough(guess, tolerance, input) ? guess : sqrtIter(improve(guess, input), tolerance, input);
+  }
+
+  const isGoodEnough = (guess: number, tolerance: number, input: number): boolean => {
+    return Math.abs(guess * guess - input) <= tolerance;
+  }
+
+  const improve = (guess: number, input: number): number => {
+    return 0.5 * (guess + input/guess);
+  }
+
+
+
   // Handle user input (e.g., arrow keys)
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -125,7 +144,7 @@ export default function NewPage() {
     <span className={inter.className}>-&gt; Hello, World! &lt;-</span>;
     <span className={inter.className}>{}</span>;
     <button onClick={()=>calculateProfit()}>Generate</button>
-    <button onClick={()=>{}}>Filter</button>
+    <button onClick={()=>{sqrt(2)}}>Take the square root of two</button>
     <button onClick={()=>{}}></button>
     <button onClick={()=>{}}>Sort</button>
     <p>Total Gold: {}</p>
