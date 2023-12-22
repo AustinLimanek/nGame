@@ -35,6 +35,7 @@ export default function Home() {
           <Link href="/newPage">Go to Page</Link>
           <Link href="/testingYScroll">Go to Page</Link>
           <Link href="/snake">Snake</Link>
+          <Link href="/trie">Trie</Link>
         </div>
       </div>
 
